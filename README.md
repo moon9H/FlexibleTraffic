@@ -1,4 +1,4 @@
-# Flexible Traffic Systme
+# Flexible Traffic System
 ### SW Pilot 파이썬 과정 파이썬 5팀
 * AI 기반의 유동적인 신호등 시스템을 구축을 목표로 하는 프로젝트
 

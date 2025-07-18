@@ -3,3 +3,4 @@ supervision
 numpy
 opencv-python
 matplotlib
+pyqt5

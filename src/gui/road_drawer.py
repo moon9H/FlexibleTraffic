@@ -1,11 +1,14 @@
 from PyQt5.QtGui import QBrush, QColor, QPen
 from PyQt5.QtCore import QRectF, Qt
+from PyQt5.QtWidgets import QLabel
+
 
 class RoadDrawer:
-    def __init__(self, scene, scene_width, scene_height):
+    def __init__(self, scene, scene_width, scene_height, parent=None):
         self.scene = scene
         self.scene_width = scene_width
         self.scene_height = scene_height
+        self.parent = parent
         self.vert_road_width = 200
         self.horiz_road_height = 200
         self.center_box_size = 200
@@ -38,3 +41,17 @@ class RoadDrawer:
         for y in [csy - hrh / 4, csy + hrh / 4]:
             self.scene.addLine(0, y, csx - cb_size / 2, y, white_pen)
             self.scene.addLine(csx + cb_size / 2, y, self.scene_width, y, white_pen)
+    
+    def add_road_labels(self, labels):
+        # 도로 이름을 교차로 주변에 표시
+        label_positions = [
+            (450, 10),    # 위쪽 (Road #1)
+            (800, 320),   # 오른쪽 (Road #2)
+            (350, 860),   # 아래쪽 (Road #3)
+            (10, 550),    # 왼쪽 (Road #4)
+        ]
+        for i, (x, y) in enumerate(label_positions):
+            road_label = QLabel(labels[i], self.parent)
+            road_label.setGeometry(x, y, 100, 30)
+            road_label.setAlignment(Qt.AlignCenter)
+            road_label.setStyleSheet("font-weight: bold; font-size: 16px; background: rgba(255,255,255,180); border-radius: 8px;")

@@ -1,17 +1,20 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, QMainWindow, QPushButton, QMessageBox
+from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, QMainWindow, QPushButton, QMessageBox, QLabel
 from PyQt5.QtCore import Qt
 from gui.road_drawer import RoadDrawer
 from ai.carDetector import CarDetector
 from gui.quadrant_widget import QuadrantWidget
 
 BTN_SIZE = 100
+
 THUMB_SIZE = 200
+
 BTN_POSITIONS = [
     (100, 50), (700, 50),
     (100, 600), (700, 600),
 ]
-LABELS = ["1사분면", "2사분면", "3사분면", "4사분면"]
+
+LABELS = ["Road #1", "Road #2", "Road #3", "Road #4"]
 
 class RoadWindow(QMainWindow):
     def __init__(self):
@@ -25,14 +28,16 @@ class RoadWindow(QMainWindow):
         self.view = QGraphicsView(self.scene, self)
         self.setCentralWidget(self.view)
 
-        self.road_drawer = RoadDrawer(self.scene, self.scene_width, self.scene_height)
+        self.road_drawer = RoadDrawer(self.scene, self.scene_width, self.scene_height, parent=self)
         self.road_drawer.draw_intersection()
         self.road_drawer.draw_lane_markings()
+        self.road_drawer.add_road_labels(LABELS)
 
         self.car_detector = CarDetector()
         self.quadrants = [QuadrantWidget(self, LABELS[i], BTN_POSITIONS[i][0], BTN_POSITIONS[i][1], BTN_SIZE, THUMB_SIZE) for i in range(4)]
 
         self.add_center_button()
+
 
     def add_center_button(self):
         btn_width = 120

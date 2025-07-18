@@ -2,7 +2,6 @@ from PyQt5.QtGui import QBrush, QColor, QPen
 from PyQt5.QtCore import QRectF, Qt
 from PyQt5.QtWidgets import QLabel
 
-
 class RoadDrawer:
     def __init__(self, scene, scene_width, scene_height, parent=None):
         self.scene = scene
@@ -29,8 +28,12 @@ class RoadDrawer:
         vrw = self.vert_road_width
         hrh = self.horiz_road_height
         cb_size = self.center_box_size
-        white_pen = QPen(QColor("white")); white_pen.setWidth(2)
-        yellow_pen = QPen(QColor("yellow")); yellow_pen.setWidth(3); yellow_pen.setStyle(Qt.DashLine)
+        white_pen = QPen(QColor("white")); white_pen.setWidth(2); white_pen.setStyle(Qt.DashLine)
+        yellow_pen = QPen(QColor("yellow")); yellow_pen.setWidth(3)
+        stop_pen = QPen(QColor("white")); stop_pen.setWidth(4)  # 정지선은 더 두껍게
+        border_pen = QPen(QColor("white")); border_pen.setWidth(2)  # 도로 외곽선
+
+
         self.scene.addLine(csx, 0, csx, csy - cb_size / 2, yellow_pen)
         self.scene.addLine(csx, csy + cb_size / 2, csx, self.scene_height, yellow_pen)
         for x in [csx - vrw / 4, csx + vrw / 4]:
@@ -41,6 +44,22 @@ class RoadDrawer:
         for y in [csy - hrh / 4, csy + hrh / 4]:
             self.scene.addLine(0, y, csx - cb_size / 2, y, white_pen)
             self.scene.addLine(csx + cb_size / 2, y, self.scene_width, y, white_pen)
+        
+        # 각 도로의 정지선(더 두껍게)
+        # 위쪽
+        self.scene.addLine(csx - vrw / 2, csy - cb_size / 2, csx + vrw / 2, csy - cb_size / 2, stop_pen)
+        # 아래쪽
+        self.scene.addLine(csx - vrw / 2, csy + cb_size / 2, csx + vrw / 2, csy + cb_size / 2, stop_pen)
+        # 왼쪽
+        self.scene.addLine(csx - cb_size / 2, csy - hrh / 2, csx - cb_size / 2, csy + hrh / 2, stop_pen)
+        # 오른쪽
+        self.scene.addLine(csx + cb_size / 2, csy - hrh / 2, csx + cb_size / 2, csy + hrh / 2, stop_pen)
+
+        # 도로 전체 외곽선 추가
+        # 세로 도로 외곽
+        self.scene.addRect(csx - vrw / 2, 0, vrw, self.scene_height, border_pen)
+        # 가로 도로 외곽
+        self.scene.addRect(0, csy - hrh / 2, self.scene_width, hrh, border_pen)
     
     def add_road_labels(self, labels):
         # 도로 이름을 교차로 주변에 표시

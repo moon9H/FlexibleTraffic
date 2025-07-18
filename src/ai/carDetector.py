@@ -3,6 +3,7 @@ from ultralytics import YOLO
 class CarDetector:
     def __init__(self, model_path="ai/yolov8x.pt"):
         self.model = YOLO(model_path)
+        self.model.fuse() # for faster inference
 
     def detect_cars(self, image_path):
         results = self.model.predict(source=image_path, conf=0.25, save=False, verbose=False)

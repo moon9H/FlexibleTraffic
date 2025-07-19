@@ -29,7 +29,7 @@ def fetch_dummy_counts() -> TrafficCounts:
 
 def compute_green_times(
     counts: TrafficCounts,
-    cycle: int = 100,
+    cycle: int = 120,
     base_min: int = 10,
     alpha: float = 0.5
 ) -> GreenTimes:

@@ -59,10 +59,10 @@ class RoadWindow(QMainWindow):
             self.quadrants[i].result_label.setText(f"차량 수 : {count}대")
         
         self.call_animator(results)
-    
+        return results
+        
     def call_animator(self, vehicle_counts) :
         # animation GUI 실행
-        # self.road_drawer.show()
         self.road_drawer.animate_vehicles(vehicle_counts)
 
 if __name__ == "__main__":

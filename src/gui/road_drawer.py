@@ -39,7 +39,7 @@ class RoadDrawer:
         self.center_box_size = 200
         self.center_x = self.scene_width / 2
         self.center_y = self.scene_height / 2
-        self.view = QGraphicsView(self.scene, self.parent)
+        # self.view = QGraphicsView(self.scene, self.parent)
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_simulation)
@@ -132,7 +132,7 @@ class RoadDrawer:
         # 남쪽 ↑
         south_lanes = [center_x + vrw / 4  -4, center_x + vrw / 4 + lane_spacing+16]
         for i, x in enumerate(south_lanes):
-            for j in range(distribute(vehicle_counts[3])[i]):
+            for j in range(distribute(vehicle_counts[2])[i]):
                 y = 1000 + j * (car_height + car_spacing)
                 car = VehicleItem("south", x, y)
                 self.scene.addItem(car)
@@ -150,7 +150,7 @@ class RoadDrawer:
         # 동쪽 →
         east_lanes = [center_y + hrh / 4 - lane_spacing-10, center_y + hrh / 4 + lane_spacing-14]
         for i, y in enumerate(east_lanes):
-            for j in range(distribute(vehicle_counts[2])[i]):
+            for j in range(distribute(vehicle_counts[1])[i]):
                 x = 0 - j * (car_width + car_spacing)
                 car = VehicleItem("east", x, y)
                 self.scene.addItem(car)

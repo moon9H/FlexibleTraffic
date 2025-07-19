@@ -35,35 +35,49 @@ class RoadWindow(QMainWindow):
 
         self.car_detector = CarDetector()
         self.quadrants = [QuadrantWidget(self, LABELS[i], BTN_POSITIONS[i][0], BTN_POSITIONS[i][1], BTN_SIZE, THUMB_SIZE) for i in range(4)]
+        self.results = []
 
-        self.add_center_button()
+        self.add_detection_center_button()
+        self.add_simulation_center_button()
 
-
-    def add_center_button(self):
+    def add_detection_center_button(self):
         btn_width = 120
         btn_height = 40
         center_x = (self.scene_width - btn_width) // 2
-        center_y = (self.scene_height - btn_height) // 2
+        center_y = (self.scene_height - btn_height) // 2 - 20
         center_btn = QPushButton("감지 실행", self)
         center_btn.setGeometry(center_x, center_y, btn_width, btn_height)
         center_btn.raise_()
         center_btn.clicked.connect(self.run_detection)
+
+    def add_simulation_center_button(self):
+        btn_width = 120
+        btn_height = 40
+        center_x = (self.scene_width - btn_width) // 2
+        center_y = (self.scene_height - btn_height) // 2 + 20
+        center_btn = QPushButton("시뮬레이션 실행", self)
+        center_btn.setGeometry(center_x, center_y, btn_width, btn_height)
+        center_btn.raise_()
+        center_btn.clicked.connect(self.call_animator)
 
     def run_detection(self):
         missing = [i+1 for i, q in enumerate(self.quadrants) if q.image_path is None]
         if missing:
             QMessageBox.warning(self, "이미지 누락", f"{', '.join(map(str, missing))}사분면 이미지가 선택되지 않았습니다.")
             return
-        results = self.car_detector.run_detection(self.quadrants)
-        for i, count in enumerate(results):
+        
+        self.results = self.car_detector.run_detection(self.quadrants)
+
+        for i, count in enumerate(self.results):
             self.quadrants[i].result_label.setText(f"차량 수 : {count}대")
         
-        self.call_animator(results)
-        return results
+        self.road_drawer.add_detected_vehicles(self.results)
         
-    def call_animator(self, vehicle_counts) :
-        # animation GUI 실행
-        self.road_drawer.animate_vehicles(vehicle_counts)
+    def call_animator(self) :
+        if len(self.results) != 4 :
+            QMessageBox.warning(self, "도로별 차량수 미설정", "도로별 차량수를 모두 설정해주세요.")
+            return
+        self.road_drawer.animate_vehicles(self.results)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -3,10 +3,6 @@ from PyQt5.QtCore import QRectF, Qt
 from PyQt5.QtWidgets import QLabel, QGraphicsEllipseItem, QGraphicsView, QGraphicsRectItem
 from PyQt5.QtCore import QTimer
 
-"""
-20250719 https://github.com/jaeyoung0710/swproject/blob/main/teamproject/test4.py 와 merge 진행
-"""
-
 class VehicleItem(QGraphicsRectItem):
     def __init__(self, direction, x, y, width=40, height=25, color=QColor(30, 144, 255)):
         super().__init__(0, 0, width, height)
@@ -23,9 +19,9 @@ class VehicleItem(QGraphicsRectItem):
         elif self.direction == 'south':
             dy = -self.speed
         elif self.direction == 'east':
-            dx = self.speed
-        elif self.direction == 'west':
             dx = -self.speed
+        elif self.direction == 'west':
+            dx = self.speed
         self.moveBy(dx, dy)
 
 class RoadDrawer:
@@ -39,12 +35,10 @@ class RoadDrawer:
         self.center_box_size = 200
         self.center_x = self.scene_width / 2
         self.center_y = self.scene_height / 2
-        # self.view = QGraphicsView(self.scene, self.parent)
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_simulation)
         self.vehicles = []
-
 
     def draw_intersection(self):
         csx, csy = self.center_x, self.center_y
@@ -107,63 +101,95 @@ class RoadDrawer:
             road_label.setAlignment(Qt.AlignCenter)
             road_label.setStyleSheet("font-weight: bold; font-size: 16px; background: rgba(255,255,255,180); border-radius: 8px;")
 
-
-
     def add_detected_vehicles(self, vehicle_counts):
-        car_width, car_height = 40, 25
-        lane_spacing = 30
-        car_spacing = 10
-        center_x, center_y = 500, 500
-        vrw, hrh = 200, 200
+        car_gap = 10
+        car_width = 40
+        car_height = 25
 
-        def distribute(count):
-            half = count // 2
-            return [half + (count % 2), half]
+        cx, cy = self.center_x, self.center_y
+        vrw, hrh = self.vert_road_width, self.horiz_road_height
+        cb = self.center_box_size
 
-        # 북쪽 ↓
-        north_lanes = [center_x - vrw / 4 - lane_spacing-14, center_x - vrw / 4 + lane_spacing-25]
-        for i, x in enumerate(north_lanes):
-            for j in range(distribute(vehicle_counts[0])[i]):
-                y = 0 - j * (car_height + car_spacing)
-                car = VehicleItem("north", x, y)
-                self.scene.addItem(car)
-                self.vehicles.append(car)
+        def distribute(n):
+            h = n // 2
+            return [h + n % 2, h]
 
-        # 남쪽 ↑
-        south_lanes = [center_x + vrw / 4  -4, center_x + vrw / 4 + lane_spacing+16]
-        for i, x in enumerate(south_lanes):
-            for j in range(distribute(vehicle_counts[2])[i]):
-                y = 1000 + j * (car_height + car_spacing)
-                car = VehicleItem("south", x, y)
-                self.scene.addItem(car)
-                self.vehicles.append(car)
+        # 각 도로별 "라벨링 위치에 맞는 하얀 점선" 기준으로 차량 배치
+        lanes = {
+            # Road #1: 오른쪽 하얀 점선 기준 (cx + vrw/4)
+            "north": [cx + vrw / 4 - car_width / 2],
+            # Road #2: 아래쪽 도로의 위쪽 하얀 점선 기준 (cy + hrh/4)
+            "east": [cy - hrh / 4 - car_height / 2],
+            # Road #3: 왼쪽 하얀 점선 기준 (cx - vrw/4)
+            "south": [cx - vrw / 4 - car_width / 2],
+            # Road #4: 위쪽 도로의 아래쪽 하얀 점선 기준 (cy - hrh/4)
+            "west": [cy + hrh / 4 - car_height / 2]
+        }
+        stop_lines = {
+            "north": cy - cb / 2 - car_height - car_gap,
+            "south": cy + cb / 2 + car_gap,
+            "east": cx + cb / 2 + car_gap,
+            "west": cx - cb / 2 - car_width - car_gap
+        }
 
-        # 서쪽 ←
-        west_lanes = [center_y - hrh / 4 - lane_spacing+20, center_y - hrh / 4 + lane_spacing+5]
-        for i, y in enumerate(west_lanes):
-            for j in range(distribute(vehicle_counts[3])[i]):
-                x = 1000 + j * (car_width + car_spacing)
-                car = VehicleItem("west", x, y)
-                self.scene.addItem(car)
-                self.vehicles.append(car)
+        dir_map = {"north": 0, "east": 1, "south": 2, "west": 3}
 
-        # 동쪽 →
-        east_lanes = [center_y + hrh / 4 - lane_spacing-10, center_y + hrh / 4 + lane_spacing-14]
-        for i, y in enumerate(east_lanes):
-            for j in range(distribute(vehicle_counts[1])[i]):
-                x = 0 - j * (car_width + car_spacing)
-                car = VehicleItem("east", x, y)
-                self.scene.addItem(car)
-                self.vehicles.append(car)
+        # 차량 배치 (흰선 기준으로 양옆 두 줄로)
+        for dir in ["north"]:
+            base_x = lanes[dir][0]
+            count = vehicle_counts[dir_map[dir]]
+            dist = distribute(count)
+            offsets = [-car_width / 2 - 5, car_width / 2 + 5]
+            for i in range(2):
+                for j in range(dist[i]):
+                    x = base_x + offsets[i]
+                    y = stop_lines[dir] - j * (car_height + car_gap)
+                    car = VehicleItem(dir, x, y)
+                    self.scene.addItem(car)
+                    self.vehicles.append(car)
 
+        for dir in ["east"]:
+            base_y = lanes[dir][0]
+            count = vehicle_counts[dir_map[dir]]
+            dist = distribute(count)
+            offsets = [-car_height / 2 - 5, car_height / 2 + 5]
+            for i in range(2):
+                for j in range(dist[i]):
+                    y = base_y + offsets[i]
+                    x = stop_lines[dir] + j * (car_width + car_gap)
+                    car = VehicleItem(dir, x, y)
+                    self.scene.addItem(car)
+                    self.vehicles.append(car)
+
+        for dir in ["south"]:
+            base_x = lanes[dir][0]
+            count = vehicle_counts[dir_map[dir]]
+            dist = distribute(count)
+            offsets = [-car_width / 2 - 5, car_width / 2 + 5]
+            for i in range(2):
+                for j in range(dist[i]):
+                    x = base_x + offsets[i]
+                    y = stop_lines[dir] + j * (car_height + car_gap)
+                    car = VehicleItem(dir, x, y)
+                    self.scene.addItem(car)
+                    self.vehicles.append(car)
+
+        for dir in ["west"]:
+            base_y = lanes[dir][0]
+            count = vehicle_counts[dir_map[dir]]
+            dist = distribute(count)
+            offsets = [-car_height / 2 - 5, car_height / 2 + 5]
+            for i in range(2):
+                for j in range(dist[i]):
+                    y = base_y + offsets[i]
+                    x = stop_lines[dir] - j * (car_width + car_gap)
+                    car = VehicleItem(dir, x, y)
+                    self.scene.addItem(car)
+                    self.vehicles.append(car)
 
     def update_simulation(self):
         for car in self.vehicles:
             car.move_forward()
 
     def animate_vehicles(self, vehicle_counts):
-        # 기존 차량 제거
-        for item in self.vehicles:
-            self.scene.removeItem(item)
-        self.add_detected_vehicles(vehicle_counts)
         self.timer.start(30)

@@ -57,6 +57,13 @@ class RoadWindow(QMainWindow):
         results = self.car_detector.run_detection(self.quadrants)
         for i, count in enumerate(results):
             self.quadrants[i].result_label.setText(f"차량 수 : {count}대")
+        
+        self.call_animator(results)
+    
+    def call_animator(self, vehicle_counts) :
+        # animation GUI 실행
+        # self.road_drawer.show()
+        self.road_drawer.animate_vehicles(vehicle_counts)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

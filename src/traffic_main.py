@@ -1,12 +1,11 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, QMainWindow, QPushButton, QMessageBox, QLabel
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from gui.road_drawer import RoadDrawer
 from ai.carDetector import CarDetector
 from gui.quadrant_widget import QuadrantWidget
 
 BTN_SIZE = 100
-
 THUMB_SIZE = 200
 
 BTN_POSITIONS = [
@@ -24,6 +23,8 @@ class RoadWindow(QMainWindow):
         self.scene_width = 900
         self.scene_height = 900
 
+        self.green_durations = [1, 1, 1, 1]  # 북, 동, 남, 서 초록불 시간 (초)
+
         self.scene = QGraphicsScene(0, 0, self.scene_width, self.scene_height)
         self.view = QGraphicsView(self.scene, self)
         self.setCentralWidget(self.view)
@@ -39,6 +40,11 @@ class RoadWindow(QMainWindow):
 
         self.add_detection_center_button()
         self.add_simulation_center_button()
+
+        # 🔹 신호등 순환 관련 변수
+        self.current_signal_index = -1
+        self.signal_timer = QTimer()
+        self.signal_timer.timeout.connect(self.update_signal)
 
     def add_detection_center_button(self):
         btn_width = 120
@@ -65,19 +71,42 @@ class RoadWindow(QMainWindow):
         if missing:
             QMessageBox.warning(self, "이미지 누락", f"{', '.join(map(str, missing))}사분면 이미지가 선택되지 않았습니다.")
             return
-        
+
         self.results = self.car_detector.run_detection(self.quadrants)
 
         for i, count in enumerate(self.results):
             self.quadrants[i].result_label.setText(f"차량 수 : {count}대")
-        
+
         self.road_drawer.add_detected_vehicles(self.results)
-        
-    def call_animator(self) :
-        if len(self.results) != 4 :
+
+    def call_animator(self):
+        if len(self.results) != 4:
             QMessageBox.warning(self, "도로별 차량수 미설정", "도로별 차량수를 모두 설정해주세요.")
             return
         self.road_drawer.animate_vehicles(self.results)
+        self.start_signal_cycle()  # 🔥 시뮬레이션과 함께 신호등 시작
+
+    def start_signal_cycle(self):
+        self.update_signal()
+
+    def update_signal(self):
+        self.current_signal_index = (self.current_signal_index + 1) % 4
+
+        # 모든 라벨 흰색
+        for label in self.label_widgets:
+            label.setStyleSheet("font-weight: bold; font-size: 16px; background-color: red; border-radius: 8px;")
+
+        # 현재 라벨 초록색
+        self.label_widgets[self.current_signal_index].setStyleSheet(
+            "font-weight: bold; font-size: 16px; background-color: lightgreen; border-radius: 8px;"
+        )
+
+        current_direction = ['north', 'east', 'south', 'west'][self.current_signal_index]
+        self.road_drawer.current_green_direction = current_direction
+
+        # 현재 방향의 초록불 지속 시간 사용 (초 → ms)
+        duration = self.green_durations[self.current_signal_index]
+        self.signal_timer.start(duration * 1000)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

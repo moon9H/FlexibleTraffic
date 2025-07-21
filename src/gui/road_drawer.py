@@ -1,18 +1,35 @@
 from PyQt5.QtGui import QBrush, QColor, QPen
 from PyQt5.QtCore import QRectF, Qt
-from PyQt5.QtWidgets import QLabel, QGraphicsEllipseItem, QGraphicsView, QGraphicsRectItem
+from PyQt5.QtWidgets import QLabel, QGraphicsRectItem
 from PyQt5.QtCore import QTimer
 
 class VehicleItem(QGraphicsRectItem):
-    def __init__(self, direction, x, y, width=40, height=25, color=QColor(30, 144, 255)):
+    def __init__(self, direction, x, y, stop_line, width=40, height=25, color=QColor(30, 144, 255)):
         super().__init__(0, 0, width, height)
         self.setBrush(QBrush(color))
         self.setPen(QPen(Qt.NoPen))
         self.setPos(x, y)
         self.direction = direction
         self.speed = 3
-    
-    def move_forward(self):
+        self.stop_line = stop_line  # ✅ 정지선 정보 저장
+
+    def move_forward(self, current_green_direction=None):
+        # ✅ 정지선 넘었는지 판단
+        crossed = False
+        if self.direction == 'north':
+            crossed = self.y() > self.stop_line
+        elif self.direction == 'south':
+            crossed = self.y() < self.stop_line
+        elif self.direction == 'east':
+            crossed = self.x() < self.stop_line
+        elif self.direction == 'west':
+            crossed = self.x() > self.stop_line
+
+        # ✅ 아직 정지선 전인데 초록불이 아니면 멈춤
+        if not crossed and current_green_direction != self.direction:
+            return
+
+        # ✅ 이동
         dx, dy = 0, 0
         if self.direction == 'north':
             dy = self.speed
@@ -56,9 +73,8 @@ class RoadDrawer:
         cb_size = self.center_box_size
         white_pen = QPen(QColor("white")); white_pen.setWidth(2); white_pen.setStyle(Qt.DashLine)
         yellow_pen = QPen(QColor("yellow")); yellow_pen.setWidth(3)
-        stop_pen = QPen(QColor("white")); stop_pen.setWidth(4)  # 정지선은 더 두껍게
-        border_pen = QPen(QColor("white")); border_pen.setWidth(2)  # 도로 외곽선
-
+        stop_pen = QPen(QColor("white")); stop_pen.setWidth(4)
+        border_pen = QPen(QColor("white")); border_pen.setWidth(2)
 
         self.scene.addLine(csx, 0, csx, csy - cb_size / 2, yellow_pen)
         self.scene.addLine(csx, csy + cb_size / 2, csx, self.scene_height, yellow_pen)
@@ -70,42 +86,37 @@ class RoadDrawer:
         for y in [csy - hrh / 4, csy + hrh / 4]:
             self.scene.addLine(0, y, csx - cb_size / 2, y, white_pen)
             self.scene.addLine(csx + cb_size / 2, y, self.scene_width, y, white_pen)
-        
-        # 각 도로의 정지선(더 두껍게)
-        # 위쪽
+
         self.scene.addLine(csx - vrw / 2, csy - cb_size / 2, csx + vrw / 2, csy - cb_size / 2, stop_pen)
-        # 아래쪽
         self.scene.addLine(csx - vrw / 2, csy + cb_size / 2, csx + vrw / 2, csy + cb_size / 2, stop_pen)
-        # 왼쪽
         self.scene.addLine(csx - cb_size / 2, csy - hrh / 2, csx - cb_size / 2, csy + hrh / 2, stop_pen)
-        # 오른쪽
         self.scene.addLine(csx + cb_size / 2, csy - hrh / 2, csx + cb_size / 2, csy + hrh / 2, stop_pen)
 
-        # 도로 전체 외곽선 추가
-        # 세로 도로 외곽
         self.scene.addRect(csx - vrw / 2, 0, vrw, self.scene_height, border_pen)
-        # 가로 도로 외곽
         self.scene.addRect(0, csy - hrh / 2, self.scene_width, hrh, border_pen)
-    
+
     def add_road_labels(self, labels):
-        # 도로 이름을 교차로 주변에 표시
         label_positions = [
-            (450, 10),    # 위쪽 (Road #1)
-            (800, 320),   # 오른쪽 (Road #2)
-            (350, 860),   # 아래쪽 (Road #3)
-            (10, 550),    # 왼쪽 (Road #4)
+            (450, 10),
+            (800, 320),
+            (350, 860),
+            (10, 550),
         ]
+        self.parent.label_widgets = []  # 라벨 저장 리스트 초기화
+
         for i, (x, y) in enumerate(label_positions):
             road_label = QLabel(labels[i], self.parent)
             road_label.setGeometry(x, y, 100, 30)
             road_label.setAlignment(Qt.AlignCenter)
-            road_label.setStyleSheet("font-weight: bold; font-size: 16px; background: rgba(255,255,255,180); border-radius: 8px;")
+            road_label.setStyleSheet(
+                "font-weight: bold; font-size: 16px; background: rgba(255,255,255,180); border-radius: 8px;"
+            )
+            self.parent.label_widgets.append(road_label)  # ✅ 이 줄이 가장 중요!
 
     def add_detected_vehicles(self, vehicle_counts):
         car_gap = 10
         car_width = 40
         car_height = 25
-
         cx, cy = self.center_x, self.center_y
         vrw, hrh = self.vert_road_width, self.horiz_road_height
         cb = self.center_box_size
@@ -114,15 +125,10 @@ class RoadDrawer:
             h = n // 2
             return [h + n % 2, h]
 
-        # 각 도로별 "라벨링 위치에 맞는 하얀 점선" 기준으로 차량 배치
         lanes = {
-            # Road #1: 오른쪽 하얀 점선 기준 (cx + vrw/4)
-            "north": [cx + vrw / 4 - car_width / 2],
-            # Road #2: 아래쪽 도로의 위쪽 하얀 점선 기준 (cy + hrh/4)
+            "north": [cx - vrw / 4 - car_width / 2],
             "east": [cy - hrh / 4 - car_height / 2],
-            # Road #3: 왼쪽 하얀 점선 기준 (cx - vrw/4)
-            "south": [cx - vrw / 4 - car_width / 2],
-            # Road #4: 위쪽 도로의 아래쪽 하얀 점선 기준 (cy - hrh/4)
+            "south": [cx + vrw / 4 - car_width / 2],
             "west": [cy + hrh / 4 - car_height / 2]
         }
         stop_lines = {
@@ -134,7 +140,6 @@ class RoadDrawer:
 
         dir_map = {"north": 0, "east": 1, "south": 2, "west": 3}
 
-        # 차량 배치 (흰선 기준으로 양옆 두 줄로)
         for dir in ["north"]:
             base_x = lanes[dir][0]
             count = vehicle_counts[dir_map[dir]]
@@ -144,7 +149,7 @@ class RoadDrawer:
                 for j in range(dist[i]):
                     x = base_x + offsets[i]
                     y = stop_lines[dir] - j * (car_height + car_gap)
-                    car = VehicleItem(dir, x, y)
+                    car = VehicleItem(dir, x, y, stop_lines[dir])
                     self.scene.addItem(car)
                     self.vehicles.append(car)
 
@@ -157,7 +162,7 @@ class RoadDrawer:
                 for j in range(dist[i]):
                     y = base_y + offsets[i]
                     x = stop_lines[dir] + j * (car_width + car_gap)
-                    car = VehicleItem(dir, x, y)
+                    car = VehicleItem(dir, x, y, stop_lines[dir])
                     self.scene.addItem(car)
                     self.vehicles.append(car)
 
@@ -170,7 +175,7 @@ class RoadDrawer:
                 for j in range(dist[i]):
                     x = base_x + offsets[i]
                     y = stop_lines[dir] + j * (car_height + car_gap)
-                    car = VehicleItem(dir, x, y)
+                    car = VehicleItem(dir, x, y, stop_lines[dir])
                     self.scene.addItem(car)
                     self.vehicles.append(car)
 
@@ -183,13 +188,13 @@ class RoadDrawer:
                 for j in range(dist[i]):
                     y = base_y + offsets[i]
                     x = stop_lines[dir] - j * (car_width + car_gap)
-                    car = VehicleItem(dir, x, y)
+                    car = VehicleItem(dir, x, y, stop_lines[dir])
                     self.scene.addItem(car)
                     self.vehicles.append(car)
 
     def update_simulation(self):
         for car in self.vehicles:
-            car.move_forward()
+            car.move_forward(self.current_green_direction)  # ✅ 초록불 방향 전달
 
     def animate_vehicles(self, vehicle_counts):
         self.timer.start(30)

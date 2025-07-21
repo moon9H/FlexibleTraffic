@@ -23,7 +23,7 @@ class RoadWindow(QMainWindow):
         self.scene_width = 900
         self.scene_height = 900
 
-        self.green_durations = [1, 1, 1, 1]  # 북, 동, 남, 서 초록불 시간 (초)
+        self.green_durations = [2700, 4500, 3100, 1700]  # 북, 동, 남, 서 초록불 시간 (ms)
 
         self.scene = QGraphicsScene(0, 0, self.scene_width, self.scene_height)
         self.view = QGraphicsView(self.scene, self)
@@ -37,6 +37,16 @@ class RoadWindow(QMainWindow):
         self.car_detector = CarDetector()
         self.quadrants = [QuadrantWidget(self, LABELS[i], BTN_POSITIONS[i][0], BTN_POSITIONS[i][1], BTN_SIZE, THUMB_SIZE) for i in range(4)]
         self.results = []
+
+        self.elapsed_time = 0  # 경과 시간 (초)
+        self.elapsed_timer = QTimer()
+        self.elapsed_timer.timeout.connect(self.update_elapsed_time)
+
+        self.timer_label = QLabel("시뮬레이션 시간: 0초", self)
+        self.timer_label.setGeometry((self.scene_width - 200) // 2, (self.scene_height - 40) // 2 + 70, 200, 30)
+        self.timer_label.setAlignment(Qt.AlignCenter)
+        self.timer_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+        self.timer_label.hide()
 
         self.add_detection_center_button()
         self.add_simulation_center_button()
@@ -86,6 +96,11 @@ class RoadWindow(QMainWindow):
         self.road_drawer.animate_vehicles(self.results)
         self.start_signal_cycle()  # 🔥 시뮬레이션과 함께 신호등 시작
 
+        self.elapsed_time = 0
+        self.timer_label.setText("시뮬레이션 시간: 0초")
+        self.timer_label.show()
+        self.elapsed_timer.start(1000)  # 1초마다 업데이트
+
     def start_signal_cycle(self):
         self.update_signal()
 
@@ -106,7 +121,11 @@ class RoadWindow(QMainWindow):
 
         # 현재 방향의 초록불 지속 시간 사용 (초 → ms)
         duration = self.green_durations[self.current_signal_index]
-        self.signal_timer.start(duration * 1000)
+        self.signal_timer.start(duration)
+    
+    def update_elapsed_time(self):
+        self.elapsed_time += 1
+        self.timer_label.setText(f"시뮬레이션 시간: {self.elapsed_time}초")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

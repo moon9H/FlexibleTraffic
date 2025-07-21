@@ -25,7 +25,7 @@ class GreenTimes:
 # 임의의 데이터 수집 함수
 def fetch_dummy_counts() -> TrafficCounts:
     # 지금은 실제 데이터를 받아올 수 없기 때문에 일단 하드코딩함 --25.07.19
-    return TrafficCounts(east=15, west=12, south=5, north=17)
+    return TrafficCounts(east=26, west=5, south=15, north=12)
 
 def compute_green_times(
     counts: TrafficCounts,

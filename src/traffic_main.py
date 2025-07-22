@@ -23,7 +23,8 @@ class RoadWindow(QMainWindow):
         self.scene_width = 900
         self.scene_height = 900
 
-        self.green_durations = [2700, 4500, 3100, 1700]  # 북, 동, 남, 서 초록불 시간 (ms)
+        self.green_durations = [1000, 1000, 3100, 1700]  # 각 방향 초록불 시간 (ms)
+        self.yellow_duration = 2000  # 주황불 지속 시간 (ms)
 
         self.scene = QGraphicsScene(0, 0, self.scene_width, self.scene_height)
         self.view = QGraphicsView(self.scene, self)
@@ -38,7 +39,7 @@ class RoadWindow(QMainWindow):
         self.quadrants = [QuadrantWidget(self, LABELS[i], BTN_POSITIONS[i][0], BTN_POSITIONS[i][1], BTN_SIZE, THUMB_SIZE) for i in range(4)]
         self.results = []
 
-        self.elapsed_time = 0  # 경과 시간 (초)
+        self.elapsed_time = 0
         self.elapsed_timer = QTimer()
         self.elapsed_timer.timeout.connect(self.update_elapsed_time)
 
@@ -51,10 +52,11 @@ class RoadWindow(QMainWindow):
         self.add_detection_center_button()
         self.add_simulation_center_button()
 
-        # 🔹 신호등 순환 관련 변수
         self.current_signal_index = -1
+        self.next_signal_index = 0
+        self.current_phase = "red"
         self.signal_timer = QTimer()
-        self.signal_timer.timeout.connect(self.update_signal)
+        self.signal_timer.timeout.connect(self.start_yellow_phase)
 
     def add_detection_center_button(self):
         btn_width = 120
@@ -77,7 +79,7 @@ class RoadWindow(QMainWindow):
         center_btn.clicked.connect(self.call_animator)
 
     def run_detection(self):
-        missing = [i+1 for i, q in enumerate(self.quadrants) if q.image_path is None]
+        missing = [i + 1 for i, q in enumerate(self.quadrants) if q.image_path is None]
         if missing:
             QMessageBox.warning(self, "이미지 누락", f"{', '.join(map(str, missing))}사분면 이미지가 선택되지 않았습니다.")
             return
@@ -93,39 +95,49 @@ class RoadWindow(QMainWindow):
         if len(self.results) != 4:
             QMessageBox.warning(self, "도로별 차량수 미설정", "도로별 차량수를 모두 설정해주세요.")
             return
+
         self.road_drawer.animate_vehicles(self.results)
-        self.start_signal_cycle()  # 🔥 시뮬레이션과 함께 신호등 시작
+        self.start_signal_cycle()
 
         self.elapsed_time = 0
         self.timer_label.setText("시뮬레이션 시간: 0초")
         self.timer_label.show()
-        self.elapsed_timer.start(1000)  # 1초마다 업데이트
+        self.elapsed_timer.start(1000)
 
-    def start_signal_cycle(self):
-        self.update_signal()
-
-    def update_signal(self):
-        self.current_signal_index = (self.current_signal_index + 1) % 4
-
-        # 모든 라벨 흰색
-        for label in self.label_widgets:
-            label.setStyleSheet("font-weight: bold; font-size: 16px; background-color: red; border-radius: 8px;")
-
-        # 현재 라벨 초록색
-        self.label_widgets[self.current_signal_index].setStyleSheet(
-            "font-weight: bold; font-size: 16px; background-color: lightgreen; border-radius: 8px;"
-        )
-
-        current_direction = ['north', 'east', 'south', 'west'][self.current_signal_index]
-        self.road_drawer.current_green_direction = current_direction
-
-        # 현재 방향의 초록불 지속 시간 사용 (초 → ms)
-        duration = self.green_durations[self.current_signal_index]
-        self.signal_timer.start(duration)
-    
     def update_elapsed_time(self):
         self.elapsed_time += 1
         self.timer_label.setText(f"시뮬레이션 시간: {self.elapsed_time}초")
+
+    def start_signal_cycle(self):
+        self.next_signal_index = (self.current_signal_index + 1) % 4
+        self.start_green_phase()
+
+    def start_green_phase(self):
+        self.current_signal_index = self.next_signal_index
+        self.current_phase = "green"
+        self.road_drawer.current_green_direction = ['north', 'east', 'south', 'west'][self.current_signal_index]
+        self.road_drawer.current_phase = self.current_phase
+
+        for i, label in enumerate(self.label_widgets):
+            color = "lightgreen" if i == self.current_signal_index else "red"
+            label.setStyleSheet(f"font-weight: bold; font-size: 16px; background-color: {color}; border-radius: 8px;")
+
+        duration = self.green_durations[self.current_signal_index]
+        self.signal_timer.timeout.disconnect()
+        self.signal_timer.timeout.connect(self.start_yellow_phase)
+        self.signal_timer.start(duration)
+
+    def start_yellow_phase(self):
+        self.current_phase = "yellow"
+        self.road_drawer.current_phase = self.current_phase
+
+        self.label_widgets[self.current_signal_index].setStyleSheet(
+            "font-weight: bold; font-size: 16px; background-color: orange; border-radius: 8px;"
+        )
+
+        self.signal_timer.timeout.disconnect()
+        self.signal_timer.timeout.connect(self.start_signal_cycle)
+        self.signal_timer.start(self.yellow_duration)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

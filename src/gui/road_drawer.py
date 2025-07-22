@@ -13,7 +13,7 @@ class VehicleItem(QGraphicsRectItem):
         self.speed = 3
         self.stop_line = stop_line  # ✅ 정지선 정보 저장
 
-    def move_forward(self, current_green_direction=None):
+    def move_forward(self, current_green_direction=None, current_phase=None):
         # ✅ 정지선 넘었는지 판단
         crossed = False
         if self.direction == 'north':
@@ -26,8 +26,14 @@ class VehicleItem(QGraphicsRectItem):
             crossed = self.x() > self.stop_line
 
         # ✅ 아직 정지선 전인데 초록불이 아니면 멈춤
-        if not crossed and current_green_direction != self.direction:
-            return
+        if not crossed:
+            if current_phase == "green":
+                if current_green_direction != self.direction:
+                    return
+            elif current_phase == "yellow":
+                    return
+            else:
+                return
 
         # ✅ 이동
         dx, dy = 0, 0
@@ -194,7 +200,7 @@ class RoadDrawer:
 
     def update_simulation(self):
         for car in self.vehicles:
-            car.move_forward(self.current_green_direction)  # ✅ 초록불 방향 전달
+            car.move_forward(self.current_green_direction, self.current_phase)  # ✅ 초록불 방향 전달
 
     def animate_vehicles(self, vehicle_counts):
         self.timer.start(30)

@@ -4,13 +4,14 @@ from PyQt5.QtCore import Qt, QTimer
 from gui.road_drawer import RoadDrawer
 from ai.carDetector import CarDetector
 from gui.quadrant_widget import QuadrantWidget
+from logic.signal_logic import SignalLogic
 
 BTN_SIZE = 100
 THUMB_SIZE = 200
 
 BTN_POSITIONS = [
-    (100, 50), (700, 50),
-    (100, 600), (700, 600),
+    (100, 30), (700, 30),
+    (100, 580), (700, 580),
 ]
 
 LABELS = ["Road #1", "Road #2", "Road #3", "Road #4"]
@@ -23,7 +24,7 @@ class RoadWindow(QMainWindow):
         self.scene_width = 900
         self.scene_height = 900
 
-        self.green_durations = [1000, 1000, 3100, 1700]  # 각 방향 초록불 시간 (ms)
+        self.green_durations = [3000, 3000, 3000, 3000]  # 각 방향 초록불 시간 (ms)
         self.yellow_duration = 2000  # 주황불 지속 시간 (ms)
 
         self.scene = QGraphicsScene(0, 0, self.scene_width, self.scene_height)
@@ -52,6 +53,7 @@ class RoadWindow(QMainWindow):
         self.add_detection_center_button()
         self.add_simulation_center_button()
 
+        # 🔹 신호등 순환 관련 변수
         self.current_signal_index = -1
         self.next_signal_index = 0
         self.current_phase = "red"
@@ -91,18 +93,40 @@ class RoadWindow(QMainWindow):
 
         self.road_drawer.add_detected_vehicles(self.results)
 
+        # self.results -> Form of Dictionary
+        car_counts_dict = {LABELS[i]: count for i, count in enumerate(self.results)}
+
+        # SignalLogic 객체 생성
+        signal_system = SignalLogic(detected_car_counts=car_counts_dict)
+
+        # 신호 로직 계산 실행 및 결과 저장
+        self.logic_output = signal_system.apply_traffic_logic()
+
+        for sig_time in self.logic_output:
+            if sig_time[0] == 'N':
+                self.green_durations[0] = sig_time[1] * 100
+            elif sig_time[0] == 'E':
+                self.green_durations[1] = sig_time[1] * 100
+            elif sig_time[0] == 'S':
+                self.green_durations[2] = sig_time[1] * 100
+            elif sig_time[0] == 'W':
+                self.green_durations[3] = sig_time[1] * 100
+        
+        for i, time in enumerate(self.green_durations):
+            self.quadrants[i].sig_result_label.setText(f"할당된 초록불 시간 : {time / 100}s")
+
     def call_animator(self):
         if len(self.results) != 4:
             QMessageBox.warning(self, "도로별 차량수 미설정", "도로별 차량수를 모두 설정해주세요.")
             return
 
         self.road_drawer.animate_vehicles(self.results)
-        self.start_signal_cycle()
+        self.start_signal_cycle() # 시뮬레이션과 함께 신호등 시작
 
         self.elapsed_time = 0
         self.timer_label.setText("시뮬레이션 시간: 0초")
         self.timer_label.show()
-        self.elapsed_timer.start(1000)
+        self.elapsed_timer.start(1000) # 1초마다 업데이트
 
     def update_elapsed_time(self):
         self.elapsed_time += 1

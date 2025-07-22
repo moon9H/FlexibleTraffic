@@ -27,6 +27,10 @@ class QuadrantWidget:
         self.result_label.setGeometry(thumb_x, thumb_y + thumb_size + 5, thumb_size, 30)
         self.result_label.setAlignment(Qt.AlignCenter)
 
+        self.sig_result_label = QLabel("", parent)
+        self.sig_result_label.setGeometry(thumb_x, thumb_y + thumb_size + 20, thumb_size, 30)
+        self.sig_result_label.setAlignment(Qt.AlignCenter)
+
     def load_image(self):
         file_path, _ = QFileDialog.getOpenFileName(self.parent, "이미지 선택", "", "Images (*.png *.jpg *.jpeg)")
         if file_path:
@@ -35,3 +39,4 @@ class QuadrantWidget:
             self.thumbnail.setToolTip(file_path)
             self.image_path = file_path
             self.result_label.setText("")
+            self.sig_result_label.setText("")

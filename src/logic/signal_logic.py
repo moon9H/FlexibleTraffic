@@ -5,9 +5,9 @@ class SignalLogic:
         # 입력 받은 도로 이름을 내부적으로 사용할 이름으로 변환
         self.direction_map = {
             "Road #1": "N",
-            "Road #2": "W",
+            "Road #2": "E",
             "Road #3": "S",
-            "Road #4": "E"
+            "Road #4": "W"
         }
 
         # 전달받은 딕셔너리의 키를 새로운 이름으로 변환
@@ -122,6 +122,4 @@ class SignalLogic:
 
         print(f"할당된 녹색 시간 및 순서: {self.logic_results}")
 
-        return {
-            "return_value": self.logic_results
-        }
+        return self.logic_results

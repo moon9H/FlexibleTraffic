@@ -13,6 +13,9 @@ class VehicleItem(QGraphicsRectItem):
         self.speed = 3
         self.stop_line = stop_line  # ✅ 정지선 정보 저장
 
+        if direction in ['north', 'south']:
+            self.setRotation(90)
+
     def move_forward(self, current_green_direction=None, current_phase=None):
         # ✅ 정지선 넘었는지 판단
         crossed = False
@@ -103,9 +106,9 @@ class RoadDrawer:
 
     def add_road_labels(self, labels):
         label_positions = [
-            (450, 10),
+            (350, 10),
             (800, 320),
-            (350, 860),
+            (450, 860),
             (10, 550),
         ]
         self.parent.label_widgets = []  # 라벨 저장 리스트 초기화
@@ -132,29 +135,32 @@ class RoadDrawer:
             return [h + n % 2, h]
 
         lanes = {
-            "north": [cx - vrw / 4 - car_width / 2],
+            "north": [cx - vrw / 4 + car_height / 2],
+            "south": [cx + vrw / 4 + car_height / 2],
             "east": [cy - hrh / 4 - car_height / 2],
-            "south": [cx + vrw / 4 - car_width / 2],
             "west": [cy + hrh / 4 - car_height / 2]
         }
         stop_lines = {
-            "north": cy - cb / 2 - car_height - car_gap,
+            "north": cy - cb / 2 - car_gap - car_width,
             "south": cy + cb / 2 + car_gap,
             "east": cx + cb / 2 + car_gap,
-            "west": cx - cb / 2 - car_width - car_gap
+            "west": cx - cb / 2 - car_gap - car_width
         }
 
         dir_map = {"north": 0, "east": 1, "south": 2, "west": 3}
 
-        for dir in ["north"]:
+        for dir in ["north", "south"]:
             base_x = lanes[dir][0]
             count = vehicle_counts[dir_map[dir]]
             dist = distribute(count)
-            offsets = [-car_width / 2 - 5, car_width / 2 + 5]
+            offsets = [-car_height / 2 - 5, car_height / 2 + 5]  # 차량 회전 기준 세로 간격
             for i in range(2):
                 for j in range(dist[i]):
                     x = base_x + offsets[i]
-                    y = stop_lines[dir] - j * (car_height + car_gap)
+                    if dir == "north":
+                        y = stop_lines[dir] - j * (car_width + car_gap)
+                    else:  # south
+                        y = stop_lines[dir] + j * (car_width + car_gap)
                     car = VehicleItem(dir, x, y, stop_lines[dir])
                     self.scene.addItem(car)
                     self.vehicles.append(car)
@@ -168,19 +174,6 @@ class RoadDrawer:
                 for j in range(dist[i]):
                     y = base_y + offsets[i]
                     x = stop_lines[dir] + j * (car_width + car_gap)
-                    car = VehicleItem(dir, x, y, stop_lines[dir])
-                    self.scene.addItem(car)
-                    self.vehicles.append(car)
-
-        for dir in ["south"]:
-            base_x = lanes[dir][0]
-            count = vehicle_counts[dir_map[dir]]
-            dist = distribute(count)
-            offsets = [-car_width / 2 - 5, car_width / 2 + 5]
-            for i in range(2):
-                for j in range(dist[i]):
-                    x = base_x + offsets[i]
-                    y = stop_lines[dir] + j * (car_height + car_gap)
                     car = VehicleItem(dir, x, y, stop_lines[dir])
                     self.scene.addItem(car)
                     self.vehicles.append(car)

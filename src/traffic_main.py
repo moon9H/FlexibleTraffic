@@ -44,6 +44,9 @@ class RoadWindow(QMainWindow):
         self.elapsed_timer = QTimer()
         self.elapsed_timer.timeout.connect(self.update_elapsed_time)
 
+        self.check_completion_timer = QTimer()
+        self.check_completion_timer.timeout.connect(self.check_simulation_completion)
+
         self.timer_label = QLabel("시뮬레이션 시간: 0초", self)
         self.timer_label.setGeometry((self.scene_width - 200) // 2, (self.scene_height - 40) // 2 + 70, 200, 30)
         self.timer_label.setAlignment(Qt.AlignCenter)
@@ -102,6 +105,7 @@ class RoadWindow(QMainWindow):
         # 신호 로직 계산 실행 및 결과 저장
         self.logic_output = signal_system.apply_traffic_logic()
 
+        # 아래 반복문 주석 처리하고 수행 시 고정 신호에 대해 시뮬레이션 가능
         for sig_time in self.logic_output:
             if sig_time[0] == 'N':
                 self.green_durations[0] = sig_time[1] * 100
@@ -126,6 +130,7 @@ class RoadWindow(QMainWindow):
         self.elapsed_time = 0
         self.timer_label.setText("시뮬레이션 시간: 0초")
         self.timer_label.show()
+        self.check_completion_timer.start(500)  # 0.5초마다 차량 상태 확인
         self.elapsed_timer.start(1000) # 1초마다 업데이트
 
     def update_elapsed_time(self):
@@ -162,6 +167,14 @@ class RoadWindow(QMainWindow):
         self.signal_timer.timeout.disconnect()
         self.signal_timer.timeout.connect(self.start_signal_cycle)
         self.signal_timer.start(self.yellow_duration)
+    
+    def check_simulation_completion(self):
+        if self.road_drawer.are_all_vehicles_gone():
+            self.elapsed_timer.stop()
+            self.signal_timer.stop()
+            self.road_drawer.timer.stop()  # 애니메이션 타이머도 멈춤
+            self.check_completion_timer.stop()
+            QMessageBox.information(self, "시뮬레이션 종료", f"총 시뮬레이션 시간: {self.elapsed_time}초")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -197,3 +197,11 @@ class RoadDrawer:
 
     def animate_vehicles(self, vehicle_counts):
         self.timer.start(30)
+    
+    def are_all_vehicles_gone(self):
+        margin = 50
+        return all(
+            car.x() < -margin or car.x() > self.scene_width + margin or
+            car.y() < -margin or car.y() > self.scene_height + margin
+            for car in self.vehicles
+        )

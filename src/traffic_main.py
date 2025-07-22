@@ -130,7 +130,7 @@ class RoadWindow(QMainWindow):
         self.elapsed_time = 0
         self.timer_label.setText("시뮬레이션 시간: 0초")
         self.timer_label.show()
-        self.check_completion_timer.start(500)  # 0.5초마다 차량 상태 확인
+        self.check_completion_timer.start(300)  # 0.5초마다 차량 상태 확인
         self.elapsed_timer.start(1000) # 1초마다 업데이트
 
     def update_elapsed_time(self):

@@ -31,88 +31,66 @@ class SignalLogic:
         # 최종 결과를 저장할 리스트
         self.logic_results = [] 
         
-        print(f"파라미터 설정 완료: T={self.T}초, 최소 녹색={self.min_green}초, 최대 녹색={self.max_green}초")
         print(f"입력된 차량 수: {self.car_counts}")
 
     def apply_traffic_logic(self):
-        # 잉여 시간 계산
         num_directions = len(self.car_counts)
-        self.r = self.T - (num_directions * self.min_green)
-        if self.r < 0:
-            print("오류: 최소 녹색 시간의 합이 전체 사이클보다 큽니다.")
-            return None
-        print(f"계산된 잉여 시간(r): {self.r}초")
-
-        # 차량 비율 및 가중치 계산
-        total_vehicles = sum(self.car_counts.values())
-        if total_vehicles == 0:
-            weight_val = 1 / num_directions
+        if sum(self.car_counts.values()) == 0:
             for direction in self.car_counts:
-                self.weights[direction] = weight_val
+                self.alloc_green[direction] = 10
         else:
+            base_alloc = {
+                d: (10 if self.car_counts[d] == 0 else self.min_green)
+                for d in self.car_counts
+            }
+            total_vehicles = sum(self.car_counts.values())
+            self.r = self.T - sum(base_alloc.values())
+            weights = {}
             for direction, count in self.car_counts.items():
-                self.weights[direction] = count / total_vehicles
-        print(f"계산된 방향별 가중치: {self.weights}")
+                weights[direction] = count / total_vehicles if count > 0 else 0
 
-        # 1차 녹색 할당 시간 계산
-        for direction in self.weights:
-            calculated_time = self.min_green + (self.r * self.weights[direction])
-            adjusted_time = int(round(calculated_time))
+            first_alloc = {}
+            for direction in self.car_counts:
+                add_time = int(round(self.r * weights[direction]))
+                proposed = base_alloc[direction] + add_time
+                if proposed > self.max_green:
+                    first_alloc[direction] = self.max_green
+                else:
+                    first_alloc[direction] = proposed
 
-            if adjusted_time > self.max_green:
-                self.alloc_green[direction] = self.max_green
-            else:
-                self.alloc_green[direction] = adjusted_time
-        
-        print(f"1차 할당된 녹색 시간: {self.alloc_green}")
+            self.alloc_green = first_alloc.copy()
 
-        # 총합 120초를 맞추기 위한 보정 로직
-        current_sum = sum(self.alloc_green.values())
-        difference = self.T - current_sum
-        
-        print(f"1차 할당 후 총합: {current_sum}초, 보정 필요량: {difference}초")
+            # 2차 보정: 잔여 시간 다시 분배 (max_green 제한 X, min_green은 유지)
+            current_sum = sum(self.alloc_green.values())
+            difference = self.T - current_sum
 
-        if difference != 0:
-            if difference > 0:
-                filter_func = lambda d: self.alloc_green[d] < self.max_green
-            else:
-                filter_func = lambda d: self.alloc_green[d] > self.min_green
-            
-            eligible_directions = list(filter(filter_func, self.alloc_green.keys()))
-            eligible_directions.sort(key=lambda d: self.weights[d], reverse=True)
+            if difference != 0:
+                adjustable = [d for d in self.car_counts if self.car_counts[d] > 0]
+                adjustable.sort(key=lambda d: weights[d], reverse=True)
 
-            if not eligible_directions:
-                print("경고: 모든 방향이 최대/최소 녹색 시간에 도달하여 보정이 불가능합니다.")
-            else:
                 for i in range(abs(difference)):
-                    direction_to_adjust = eligible_directions[i % len(eligible_directions)]
+                    target = adjustable[i % len(adjustable)]
                     if difference > 0:
-                        self.alloc_green[direction_to_adjust] += 1
+                        self.alloc_green[target] += 1
                     else:
-                        self.alloc_green[direction_to_adjust] -= 1
+                        if self.alloc_green[target] > self.min_green:
+                            self.alloc_green[target] -= 1
 
         print(f"보정 후 최종 할당 녹색 시간: {self.alloc_green}")
         print(f"보정 후 총합: {sum(self.alloc_green.values())}초")
-        
-        # 우선순위 부여를 위한 정렬
-        # alloc_green을 기준으로 그룹화
+
         grouped_by_time = {}
         for direction, time in self.alloc_green.items():
-            if time not in grouped_by_time:
-                grouped_by_time[time] = []
-            grouped_by_time[time].append(direction)
+            grouped_by_time.setdefault(time, []).append(direction)
 
-        # 내림차순으로 정렬
         sorted_times = sorted(grouped_by_time.keys(), reverse=True)
-
-        # 정렬된 리스트 생성 (동일 시간 그룹은 무작위)
         final_sorted_directions = []
         for time in sorted_times:
             directions = grouped_by_time[time]
             random.shuffle(directions)
             final_sorted_directions.extend(directions)
 
-        # 우선순위를 리스트 형식으로 부여
+        self.logic_results = []
         for i, direction in enumerate(final_sorted_directions):
             self.logic_results.append([
                 direction,
@@ -120,6 +98,5 @@ class SignalLogic:
                 i + 1
             ])
 
-        print(f"할당된 녹색 시간 및 순서: {self.logic_results}")
-
+        print(f"할당된 녹색 시간 및 순서: {self.logic_results}\n\n")
         return self.logic_results

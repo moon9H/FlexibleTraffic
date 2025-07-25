@@ -205,3 +205,17 @@ class RoadDrawer:
             car.y() < -margin or car.y() > self.scene_height + margin
             for car in self.vehicles
         )
+
+    def get_remaining_vehicle_counts(self):
+        counts = {"north": 0, "east": 0, "south": 0, "west": 0}
+        for car in self.vehicles:
+            # 정지선 이전에 있는 차량만 집계
+            if car.direction == "north" and car.y() <= car.stop_line:
+                counts["north"] += 1
+            elif car.direction == "south" and car.y() >= car.stop_line:
+                counts["south"] += 1
+            elif car.direction == "east" and car.x() >= car.stop_line:
+                counts["east"] += 1
+            elif car.direction == "west" and car.x() <= car.stop_line:
+                counts["west"] += 1
+        return [counts["north"], counts["east"], counts["south"], counts["west"]]

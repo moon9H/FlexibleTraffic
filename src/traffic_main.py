@@ -137,8 +137,31 @@ class RoadWindow(QMainWindow):
         self.elapsed_time += 1
         self.timer_label.setText(f"시뮬레이션 시간: {self.elapsed_time}초")
 
+    def update_signal_durations_after_cycle(self):
+        remaining_counts = self.road_drawer.get_remaining_vehicle_counts()
+        car_counts_dict = {LABELS[i]: remaining_counts[i] for i in range(4)}
+        signal_system = SignalLogic(detected_car_counts=car_counts_dict)
+        logic_output = signal_system.apply_traffic_logic()
+        for sig_time in logic_output:
+            if sig_time[0] == 'N':
+                self.green_durations[0] = sig_time[1] * 100
+            elif sig_time[0] == 'E':
+                self.green_durations[1] = sig_time[1] * 100
+            elif sig_time[0] == 'S':
+                self.green_durations[2] = sig_time[1] * 100
+            elif sig_time[0] == 'W':
+                self.green_durations[3] = sig_time[1] * 100
+        
+        for i, count in enumerate(remaining_counts):
+            self.quadrants[i].result_label.setText(f"차량 수 : {count}대")
+        
+        for i, time in enumerate(self.green_durations):
+            self.quadrants[i].sig_result_label.setText(f"할당된 초록불 시간 : {time / 100}s")
+
     def start_signal_cycle(self):
         self.next_signal_index = (self.current_signal_index + 1) % 4
+        if self.next_signal_index == 0:
+            self.update_signal_durations_after_cycle()
         self.start_green_phase()
 
     def start_green_phase(self):

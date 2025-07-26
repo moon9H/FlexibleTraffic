@@ -5,6 +5,7 @@ from gui.road_drawer import RoadDrawer
 from ai.carDetector import CarDetector
 from gui.quadrant_widget import QuadrantWidget
 from logic.signal_logic import SignalLogic
+from gui.status_dash import StatusTableManager
 
 BTN_SIZE = 100
 THUMB_SIZE = 200
@@ -20,7 +21,7 @@ class RoadWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("4차선 교통 시뮬레이션")
-        self.setGeometry(100, 100, 900, 900)
+        self.setGeometry(100, 100, 1300, 900)
         self.scene_width = 900
         self.scene_height = 900
 
@@ -29,6 +30,7 @@ class RoadWindow(QMainWindow):
 
         self.scene = QGraphicsScene(0, 0, self.scene_width, self.scene_height)
         self.view = QGraphicsView(self.scene, self)
+        self.view.setFixedSize(self.scene_width, self.scene_height)
         self.setCentralWidget(self.view)
 
         self.road_drawer = RoadDrawer(self.scene, self.scene_width, self.scene_height, parent=self)
@@ -53,15 +55,18 @@ class RoadWindow(QMainWindow):
         self.timer_label.setStyleSheet("font-size: 14px; font-weight: bold;")
         self.timer_label.hide()
 
-        self.add_detection_center_button()
-        self.add_simulation_center_button()
-
         # 🔹 신호등 순환 관련 변수
         self.current_signal_index = -1
         self.next_signal_index = 0
         self.current_phase = "red"
         self.signal_timer = QTimer()
         self.signal_timer.timeout.connect(self.start_yellow_phase)
+
+        self.status_manager = StatusTableManager(self)
+        self.status_table = self.status_manager.table
+
+        self.add_detection_center_button()
+        self.add_simulation_center_button()
 
     def add_detection_center_button(self):
         btn_width = 120
@@ -92,7 +97,7 @@ class RoadWindow(QMainWindow):
         self.results = self.car_detector.run_detection(self.quadrants)
 
         for i, count in enumerate(self.results):
-            self.quadrants[i].result_label.setText(f"차량 수 : {count}대")
+            self.quadrants[i].result_label.setText(f"최초 차량 수 : {count}대")
 
         self.road_drawer.add_detected_vehicles(self.results)
 
@@ -117,7 +122,9 @@ class RoadWindow(QMainWindow):
                 self.green_durations[3] = sig_time[1] * 100
         
         for i, time in enumerate(self.green_durations):
-            self.quadrants[i].sig_result_label.setText(f"할당된 초록불 시간 : {time / 100}s")
+            self.quadrants[i].sig_result_label.setText(f"최초 할당된 초록불 시간 : {time / 100}s")
+        
+        self.status_manager.update_status_table(self.results, self.green_durations)
 
     def call_animator(self):
         if len(self.results) != 4:
@@ -152,11 +159,7 @@ class RoadWindow(QMainWindow):
             elif sig_time[0] == 'W':
                 self.green_durations[3] = sig_time[1] * 100
         
-        for i, count in enumerate(remaining_counts):
-            self.quadrants[i].result_label.setText(f"차량 수 : {count}대")
-        
-        for i, time in enumerate(self.green_durations):
-            self.quadrants[i].sig_result_label.setText(f"할당된 초록불 시간 : {time / 100}s")
+        self.status_manager.update_status_table(remaining_counts, self.green_durations)
 
     def start_signal_cycle(self):
         self.next_signal_index = (self.current_signal_index + 1) % 4
@@ -190,6 +193,9 @@ class RoadWindow(QMainWindow):
         self.signal_timer.timeout.disconnect()
         self.signal_timer.timeout.connect(self.start_signal_cycle)
         self.signal_timer.start(self.yellow_duration)
+        
+        remaining_counts = self.road_drawer.get_remaining_vehicle_counts()
+        self.status_manager.update_status_table(remaining_counts, self.green_durations)
     
     def check_simulation_completion(self):
         if self.road_drawer.are_all_vehicles_gone():
@@ -197,6 +203,9 @@ class RoadWindow(QMainWindow):
             self.signal_timer.stop()
             self.road_drawer.timer.stop()  # 애니메이션 타이머도 멈춤
             self.check_completion_timer.stop()
+            
+            self.status_manager.update_status_table([0, 0, 0, 0], [0, 0, 0, 0])
+
             QMessageBox.information(self, "시뮬레이션 종료", f"총 시뮬레이션 시간: {self.elapsed_time}초")
 
 if __name__ == "__main__":

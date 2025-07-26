@@ -1,5 +1,6 @@
 .DS_Store
 __pycache__
 src/ai/yolov8x.pt
+src/ai/yolov8n.pt
 runs
 src/ai/test_car

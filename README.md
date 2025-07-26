@@ -1,7 +1,9 @@
+![demo](img/forREADME/flexibleTraffic.png)
+
 # Flexible Traffic System
 ### SW Pilot 파이썬 과정 파이썬 5팀 (팀명 : 신(新)호등)
-![demo](img/forREADME/flexibleTraffic.png)
 * AI 기반의 유동적인 신호등 시스템을 구축을 목표로 하는 프로젝트
+
 ![Main GUIs](img/forREADME/mainGUI.png)
 
 ![Simulation Video Capture](img/forREADME/simulation.png)
@@ -43,7 +45,6 @@ python traffic_main.py
 ### 시각화 및 로그 시스템
 <img src="img/forREADME/visualize_log.png">
 
-* 트래픽 대시보드 구현하여 실시간 교통량 확인
 
 ## 팀원 역할
 <img src="img/forREADME/teamRole.png">
